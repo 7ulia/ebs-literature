@@ -209,29 +209,15 @@
       });
     }
 
-    // 내보내기 / 불러오기
-    $export.onclick = ()=>{
-      const blob = new Blob([JSON.stringify(works, null, 2)], {type:'application/json'});
+    // 내보내기 버튼
+    $export.onclick = () => {
+      const blob = new Blob([JSON.stringify(works, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = 'suneung-literature-2026.json'; a.click();
-      URL.revokeObjectURL(url);
-    };
-    $import.onclick = ()=> $file.click();
-    $file.onchange = (e)=>{
-      const f = e.target.files?.[0]; if(!f) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        try{
-          const loaded = JSON.parse(reader.result);
-          if(Array.isArray(loaded)){
-            // 덮어쓰기
-            works.length = 0; loaded.forEach(o=>works.push(o));
-            render(); alert('데이터를 불러왔어요!');
-          } else throw new Error('array expected');
-        }catch(err){ alert('JSON 형식이 올바르지 않습니다.'); }
-      };
-      reader.readAsText(f);
+      a.href = url;
+      a.download = 'suneung-literature-2026.json'; // 저장될 파일명
+      a.click();
+      URL.revokeObjectURL(url); // 메모리 해제
     };
 
     renderChips();
