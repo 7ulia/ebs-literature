@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>2026 수능특강 문학 — 연계 작품 검색</title>
+  <style>
+    :root{
+      --bg:#0b1220;--card:#11182a;--muted:#7b89a6;--text:#eef2ff;--accent:#78a6ff;
+      --chip:#1b2340;--chip-b:#2a3a6a;--ring:#3a63ff44
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1220 0%,#0e1530 100%);color:var(--text);font-family:ui-sans-serif,system-ui,AppleSDGothicNeo,'Pretendard',Segoe UI,Roboto}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    h1{font-weight:800;letter-spacing:-.3px;margin:0 0 4px}
+    .sub{color:var(--muted);margin-bottom:20px}
+
+    .toolbar{display:grid;grid-template-columns:1fr 200px 180px;gap:10px;align-items:center}
+    .search{background:#0f1830;border:1px solid #223057;padding:12px 14px;border-radius:12px;color:var(--text);outline:none}
+    .search:focus{box-shadow:0 0 0 4px var(--ring)}
+    select,button{height:44px;border-radius:12px;border:1px solid #223057;background:#0f1830;color:var(--text)}
+    button{cursor:pointer}
+    .chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 8px}
+    .chip{background:var(--chip);border:1px solid var(--chip-b);padding:6px 10px;border-radius:999px;font-size:12px;color:#cfe0ff}
+
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:16px}
+    .card{grid-column:span 12;background:var(--card);border:1px solid #1d2a4a;border-radius:16px;padding:14px 16px;transition:transform .1s ease, border-color .2s}
+    .card:hover{transform:translateY(-1px);border-color:#3b63ff}
+    .meta{display:flex;gap:10px;flex-wrap:wrap;color:#b6c6e6;font-size:13px;margin-top:4px}
+    .tag{padding:4px 8px;border-radius:999px;background:#13244a;border:1px solid #2a3a6a}
+    .title{font-weight:700;font-size:18px}
+    .points{margin-top:8px;color:#cfe0ff}
+    .summary{margin-top:6px;color:#dbe6ff}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{padding:10px 12px}
+
+    .footer{margin:40px 0;color:#90a3c5;font-size:12px}
+    .hidden{display:none}
+    @media(min-width:820px){.card{grid-column:span 6}}
+    @media(min-width:1100px){.card{grid-column:span 4}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>📚 2026 수능특강 문학 — 연계 작품 검색</h1>
+    <div class="sub">작품명·작가 검색 + 장르/개념어 필터링. 카드를 클릭하면 요약·출제 포인트가 펼쳐집니다.</div>
+
+    <div class="toolbar">
+      <input id="q" class="search" placeholder="예) 모죽지랑가 / 현진건 / 편집자적 논평" />
+      <select id="genre">
+        <option value="">전체 장르</option>
+        <option>고전 시가</option>
+        <option>고전 소설</option>
+        <option>현대 시</option>
+        <option>현대 소설</option>
+        <option>극/수필</option>
+      </select>
+      <select id="sort">
+        <option value="title">정렬: 작품명</option>
+        <option value="author">정렬: 작가</option>
+      </select>
+    </div>
+
+    <div class="chips" id="conceptChips"></div>
+
+    <div class="row" style="margin-top:8px">
+      <button id="export" class="btn">데이터 내보내기(JSON)</button>
+      <button id="import" class="btn">데이터 불러오기(JSON)</button>
+      <input id="file" type="file" accept="application/json" class="hidden" />
+    </div>
+
+    <div id="count" style="margin-top:12px;color:#9fb2da"></div>
+    <div id="grid" class="grid"></div>
+
+    <div class="footer">※ ‘출제 포인트’는 개념어 중심 핵심 요점입니다. 작품 세부는 교재 본문으로 확인하세요.</div>
+  </div>
+
+  <script>
+    // --- 데이터셋 ---
+    /**
+     * fields:
+     * - title, author, genre(고전 시가|고전 소설|현대 시|현대 소설|극/수필)
+     * - summary (2~3문장 이내)
+     * - points (쉼표로 구분된 개념어 키워드)
+     */
+    const works = [
+      // 고전 시가 (목차 및 해제 기반)
+      {title:'모죽지랑가',author:'득오',genre:'고전 시가',summary:'모죽지랑에 대한 그리움과 충정을 노래한 향가.',points:'향가, 연군지정, 후렴구 반복'},
+      {title:'화왕가',author:'이익',genre:'고전 시가',summary:'꽃을 의인화하여 올바른 임금의 도를 풍자적으로 제시.',points:'우화적 구성, 풍자, 권선징악'},
+      {title:'정과정곡',author:'정서',genre:'고전 시가',summary:'임을 잃은 슬픔과 변치 않는 사랑을 읊은 고려가요.',points:'여성 화자, 후렴구, 일편단심'},
+      {title:'소악부 <제6장>',author:'민사평',genre:'고전 시가',summary:'중국 악부시를 수용해 세태와 인생무상을 노래.',points:'악부, 차용·변용, 교훈성'},
+      {title:'귀거래 귀거래 말뿐이오 ~',author:'이현보',genre:'고전 시가',summary:'은거의 뜻을 밝히며 속세를 벗어나려는 마음을 노래.',points:'은일 사상, 강호가도, 자의식'},
+      {title:'강산 좋은 경을 ~',author:'김천택',genre:'고전 시가',summary:'경치를 예찬하며 속세의 공명을 경계한다.',points:'경물 예찬, 공명 경계, 사설시조'},
+      {title:'공명을 헤아리니 ~',author:'작자 미상',genre:'고전 시가',summary:'공명과 부귀의 덧없음을 일상의 비유로 드러냄.',points:'풍자, 비유(헌 신발), 안분지족'},
+      {title:'사우가 <제2수>',author:'이신의',genre:'고전 시가',summary:'벗과 더불어 강호에서 유유자적하려는 흥취를 노래.',points:'강호가도, 흥취, 자연 예찬'},
+      {title:'거문고 술 꽂아 놓고 ~',author:'김창업',genre:'고전 시가',summary:'거문고와 함께하는 강호의 풍류를 노래.',points:'풍류, 강호가도, 음악적 이미지'},
+      {title:'어화 세상 벗님네야 ~',author:'작자 미상',genre:'고전 시가',summary:'세상살이를 풍자하며 자연 속 소요를 찬미.',points:'해학, 우의, 자연 예찬'},
+      {title:'오륜가',author:'박선장',genre:'고전 시가',summary:'오륜의 가치를 생활 속 실천으로 강조.',points:'유교 윤리, 교훈성, 훈계'},
+      {title:'북천가',author:'김진형',genre:'고전 시가',summary:'유배 생활의 체험과 그리움, 풍류를 사실적으로 서술.',points:'기행·유배 가사, 사실 묘사, 정감 섞인 서술'},
+      {title:'용부가',author:'작자 미상',genre:'고전 시가',summary:'삶의 희로애락과 덧없음을 신변서사로 풀어낸 장편 가사.',points:'서사적 가사, 세태 비판, 교훈성'},
+      {title:'동유가',author:'홍정유',genre:'고전 시가',summary:'동쪽으로의 유람을 통해 보고 느낀 경물과 세태를 기록.',points:'기행 가사, 경물 묘사, 현실 인식'},
+      {title:'나물 캐는 노래',author:'작자 미상',genre:'고전 시가',summary:'여성들의 노동과 일상, 연정의 정서를 담은 민요.',points:'민요, 노동요, 반복구'},
+      {title:'사랑을 찬찬 얽동여 ~',author:'작자 미상',genre:'고전 시가',summary:'사랑의 정서를 해학적으로 풀어낸 민요.',points:'민요, 해학, 후렴구'},
+      {title:'모시를 이리저리 삼아 ~',author:'작자 미상',genre:'고전 시가',summary:'생활 속 사랑과 소망을 소재로 한 민요.',points:'민요, 일상성, 반복구'},
+      {title:'초한가',author:'작자 미상',genre:'고전 시가',summary:'초·한의 역사 일화를 통해 의리와 용맹을 노래.',points:'영웅담 차용, 교훈성, 역사 인용'},
+      {title:'장진주사',author:'정철',genre:'고전 시가',summary:'인생의 무상함 속에 술맛을 즐기는 태도를 노래.',points:'권주가, 인생무상, 흥취'},
+      {title:'잠령민정',author:'임제',genre:'고전 시가',summary:'백성의 삶을 살피는 목민관의 시선을 드러낸 시가.',points:'목민, 애민, 사실 서술'},
+      {title:'우국가',author:'이덕일',genre:'고전 시가',summary:'나라의 안위를 걱정하는 충절의 노래.',points:'우국 충정, 의병 정신, 호소적 어조'},
+      {title:'출새곡',author:'조우인',genre:'고전 시가',summary:'변방 관원으로의 부임 여정과 임지 생활의 소회를 서사적으로 제시.',points:'가사, 기행·서사 구성, 변방 인식'},
+
+      // 현대 소설
+      {title:'운수 좋은 날',author:'현진건',genre:'현대 소설',summary:'도시 빈민 가장의 하루를 통해 비극적 현실을 드러낸 단편.',points:'사실주의, 아이러니, 편집자적 논평'},
+      {title:'당제',author:'송기숙',genre:'현대 소설',summary:'민속 신앙과 공동체 의지로 시대의 수난을 견디는 사람들.',points:'민속 모티프, 공동체, 시대 현실'},
+      {title:'차나 한 잔',author:'김승옥',genre:'현대 소설',summary:'도시적 인간관계의 냉혹함 속에서 예술가의 불안과 소외.',points:'의식의 흐름, 도시성, 인물의 시점'},
+      {title:'모래톱 이야기',author:'김정한',genre:'현대 소설',summary:'개발 논리 속 농민들의 삶과 저항을 그린 연작 일부.',points:'상징적 공간(모래톱), 현실 비판, 서술자의 시각'},
+      {title:'삼포 가는 길',author:'황석영',genre:'현대 소설',summary:'여로형 구성 속에서 상실과 유대의 정서를 탐색.',points:'여로형 구성, 인물 대비, 산업화 비판'},
+      {title:'광장',author:'최인훈',genre:'현대 소설',summary:'분단 현실 속 개인의 자유와 이념의 모순을 성찰.',points:'상징, 내면 독백, 인물의 시점'},
+
+      // 현대 시
+      {title:'해',author:'박두진',genre:'현대 시',summary:'해의 도래를 염원하며 생명과 빛의 의지를 노래.',points:'상징(해), 명령형 어미, 생명력'},
+      {title:'국수',author:'박목월',genre:'현대 시',summary:'소박한 사물 이미지를 통해 삶의 따뜻함을 환기.',points:'서정성, 상징적 사물, 이미지'},
+      {title:'꽃 피는 시절',author:'고정희',genre:'현대 시',summary:'억압을 넘어 자유와 해방을 바라는 목소리.',points:'여성주의, 저항, 열망'},
+      {title:'사평역에서',author:'곽재구',genre:'현대 시',summary:'한 역의 풍경과 사람들 속 삶의 애환을 포착.',points:'서정적 화자, 이미지 묘사, 사회성'},
+      {title:'풀',author:'김수영',genre:'현대 시',summary:'풀의 생명력으로 저항의 정신을 상징화.',points:'상징, 저항, 반복 구조'},
+
+      // 극/수필
+      {title:'놀부전',author:'이근삼',genre:'극/수필',summary:'뮤지컬 형식으로 재해석한 「흥부전」의 권선징악과 사회 풍자.',points:'패러디, 메타연극, 사회 비판'},
+      {title:'한중록',author:'혜경궁 홍씨',genre:'극/수필',summary:'사도세자와 자신이 겪은 비극을 사실적으로 기록한 회고.',points:'자전적 수필, 사실 기록, 비극 의식'}
+    ];
+
+    // 추출 가능한 주요 개념어(필터용). 필요시 자유 추가.
+    const CONCEPTS = ['편집자적 논평','인물의 시점','여로형 구성','상징','풍자','강호가도','우국','민요','기행 가사','사실주의','서정성'];
+
+    // --- 상태 ---
+    const state = { q:'', genre:'', sort:'title', concepts:new Set() };
+
+    // --- 요소 ---
+    const $q = document.getElementById('q');
+    const $genre = document.getElementById('genre');
+    const $sort = document.getElementById('sort');
+    const $grid = document.getElementById('grid');
+    const $count = document.getElementById('count');
+    const $chips = document.getElementById('conceptChips');
+    const $export = document.getElementById('export');
+    const $import = document.getElementById('import');
+    const $file = document.getElementById('file');
+
+    // --- 이벤트 ---
+    $q.addEventListener('input', e=>{ state.q = e.target.value.trim(); render(); });
+    $genre.addEventListener('change', e=>{ state.genre = e.target.value; render(); });
+    $sort.addEventListener('change', e=>{ state.sort = e.target.value; render(); });
+
+    // 개념어 칩 렌더링
+    function renderChips(){
+      $chips.innerHTML='';
+      CONCEPTS.forEach(k=>{
+        const c = document.createElement('button');
+        c.className='chip';
+        c.textContent = state.concepts.has(k) ? `✓ ${k}` : k;
+        c.onclick = ()=>{ state.concepts.has(k) ? state.concepts.delete(k) : state.concepts.add(k); renderChips(); render(); };
+        $chips.appendChild(c);
+      });
+    }
+
+    // 카드 렌더링
+    function render(){
+      let data = works.slice();
+      const q = state.q.toLowerCase();
+
+      if(q){
+        data = data.filter(w => (w.title+w.author+w.summary+w.points).toLowerCase().includes(q));
+      }
+      if(state.genre){ data = data.filter(w=>w.genre===state.genre); }
+      if(state.concepts.size){ data = data.filter(w=>[...state.concepts].every(k=>w.points.includes(k))); }
+
+      data.sort((a,b)=> String(a[state.sort]).localeCompare(String(b[state.sort]),'ko'));
+
+      $count.textContent = `총 ${data.length}개 / 전체 ${works.length}개`;
+      $grid.innerHTML='';
+      data.forEach(w=>{
+        const card = document.createElement('div');
+        card.className='card';
+        const id = Math.random().toString(36).slice(2);
+        card.innerHTML = `
+          <div class="title">${w.title}</div>
+          <div class="meta">
+            <span class="tag">${w.author}</span>
+            <span class="tag">${w.genre}</span>
+          </div>
+          <div id="s-${id}" class="summary hidden">${w.summary}</div>
+          <div id="p-${id}" class="points hidden"><b>출제 포인트:</b> ${w.points}</div>
+        `;
+        card.onclick = ()=>{
+          document.getElementById('s-'+id).classList.toggle('hidden');
+          document.getElementById('p-'+id).classList.toggle('hidden');
+        };
+        $grid.appendChild(card);
+      });
+    }
+
+    // 내보내기 / 불러오기
+    $export.onclick = ()=>{
+      const blob = new Blob([JSON.stringify(works, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'suneung-literature-2026.json'; a.click();
+      URL.revokeObjectURL(url);
+    };
+    $import.onclick = ()=> $file.click();
+    $file.onchange = (e)=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        try{
+          const loaded = JSON.parse(reader.result);
+          if(Array.isArray(loaded)){
+            // 덮어쓰기
+            works.length = 0; loaded.forEach(o=>works.push(o));
+            render(); alert('데이터를 불러왔어요!');
+          } else throw new Error('array expected');
+        }catch(err){ alert('JSON 형식이 올바르지 않습니다.'); }
+      };
+      reader.readAsText(f);
+    };
+
+    renderChips();
+    render();
+  </script>
+</body>
+</html>
