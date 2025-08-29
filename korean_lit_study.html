@@ -128,6 +128,16 @@
       {title:'놀부전',author:'이근삼',genre:'극/수필',summary:'뮤지컬 형식으로 재해석한 「흥부전」의 권선징악과 사회 풍자.',points:'패러디, 메타연극, 사회 비판'},
       {title:'한중록',author:'혜경궁 홍씨',genre:'극/수필',summary:'사도세자와 자신이 겪은 비극을 사실적으로 기록한 회고.',points:'자전적 수필, 사실 기록, 비극 의식'}
     ];
+    
+      // 버튼 클릭 시 다운로드
+      document.getElementById('downloadBtn').addEventListener('click', () => {
+        const a = document.createElement('a');
+        const file = new Blob([JSON.stringify(dataset, null, 2)], {type: 'application/json'});
+        a.href = URL.createObjectURL(file);
+        a.download = 'suneung-literature-2026.json'; // 다운로드 파일 이름
+        a.click();
+        URL.revokeObjectURL(a.href); // 메모리 해제
+      });
 
     // 추출 가능한 주요 개념어(필터용). 필요시 자유 추가.
     const CONCEPTS = ['편집자적 논평','인물의 시점','여로형 구성','상징','풍자','강호가도','우국','민요','기행 가사','사실주의','서정성'];
@@ -199,7 +209,7 @@
       });
     }
 
-    /*// 내보내기 / 불러오기
+    // 내보내기 / 불러오기
     $export.onclick = ()=>{
       const blob = new Blob([JSON.stringify(works, null, 2)], {type:'application/json'});
       const url = URL.createObjectURL(blob);
@@ -225,7 +235,7 @@
     };
 
     renderChips();
-    render();*/
+    render();
   </script>
 </body>
 </html>
